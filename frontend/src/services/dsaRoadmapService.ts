@@ -121,12 +121,52 @@ export interface DSATopicDetail {
 
 class DSARoadmapService {
   /**
+   * Default empty roadmap response for graceful error handling
+   */
+  private getDefaultRoadmap(): DSARoadmapResponse {
+    return {
+      roadmap_id: '',
+      roadmap_name: 'DSA Roadmap',
+      roadmap_description: 'Data Structures & Algorithms Preparation',
+      roadmap_category: 'DSA',
+      target_role: 'Software Engineer',
+      difficulty_level: 'intermediate',
+      estimated_duration_days: 90,
+      stats: {
+        total_topics: 0,
+        total_estimated_hours: 0,
+        total_weight: 0,
+        average_interview_frequency: 0,
+      },
+      layers: [],
+      pci_weights: {
+        core_weight: 0.4,
+        reinforcement_weight: 0.35,
+        advanced_weight: 0.2,
+        optional_weight: 0.05,
+      },
+      user_progress: {
+        total_topics_started: 0,
+        average_mastery: 0,
+      },
+    };
+  }
+
+  /**
    * GET /api/roadmap/dsa
    * Fetch complete DSA roadmap with 4-layer structure
    * Returns layered topics with weights for PCI calculation
    */
-  async getFullDSARoadmap(): Promise<ApiResponse<DSARoadmapResponse>> {
-    return apiClient.get<DSARoadmapResponse>('/roadmap/dsa');
+  async getFullDSARoadmap(): Promise<DSARoadmapResponse> {
+    try {
+      const response = await apiClient.get<DSARoadmapResponse>('/roadmap/dsa');
+      if (response.success && response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error fetching DSA roadmap:', error);
+    }
+    return this.getDefaultRoadmap();
   }
 
   /**
@@ -134,11 +174,19 @@ class DSARoadmapService {
    * Fetch roadmap grouped by layers with statistics
    * Useful for roadmap navigation and layer-based visualization
    */
-  async getDSALayers(): Promise<ApiResponse<{
-    roadmap_name: string;
-    layers: DSALayer[];
-  }>> {
-    return apiClient.get('/roadmap/dsa/layers');
+  async getDSALayers(): Promise<{ roadmap_name: string; layers: DSALayer[] }> {
+    try {
+      const response = await apiClient.get<{ roadmap_name: string; layers: DSALayer[] }>('/roadmap/dsa/layers');
+      if (response.success && response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error fetching DSA layers:', error);
+    }
+    return {
+      roadmap_name: 'DSA Roadmap',
+      layers: [],
+    };
   }
 
   /**
@@ -150,13 +198,21 @@ class DSARoadmapService {
     layer?: 'core' | 'reinforcement' | 'advanced' | 'optional';
     difficulty?: 'easy' | 'medium' | 'hard';
     search?: string;
-  }): Promise<ApiResponse<DSALayerTopic[]>> {
-    const params: Record<string, string> = {};
-    if (options?.layer) params.layer = options.layer;
-    if (options?.difficulty) params.difficulty = options.difficulty;
-    if (options?.search) params.search = options.search;
+  }): Promise<DSALayerTopic[]> {
+    try {
+      const params: Record<string, string> = {};
+      if (options?.layer) params.layer = options.layer;
+      if (options?.difficulty) params.difficulty = options.difficulty;
+      if (options?.search) params.search = options.search;
 
-    return apiClient.get<DSALayerTopic[]>('/roadmap/dsa/topics', { params });
+      const response = await apiClient.get<DSALayerTopic[]>('/roadmap/dsa/topics', { params });
+      if (response.success && response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error fetching DSA topics:', error);
+    }
+    return [];
   }
 
   /**
@@ -164,8 +220,16 @@ class DSARoadmapService {
    * Fetch detailed information for a specific DSA topic
    * Includes prerequisites, resources, and user progress
    */
-  async getDSATopicDetail(topicId: string): Promise<ApiResponse<DSATopicDetail>> {
-    return apiClient.get<DSATopicDetail>(`/roadmap/dsa/topic/${topicId}`);
+  async getDSATopicDetail(topicId: string): Promise<DSATopicDetail | null> {
+    try {
+      const response = await apiClient.get<DSATopicDetail>(`/roadmap/dsa/topic/${topicId}`);
+      if (response.success && response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error(`Error fetching DSA topic detail for ${topicId}:`, error);
+    }
+    return null;
   }
 
   /**
@@ -173,8 +237,21 @@ class DSARoadmapService {
    * Fetch problems for a specific DSA topic
    * Includes importance scores, difficulty, and platform information
    */
-  async getDSATopicProblems(topicId: string): Promise<ApiResponse<DSATopicProblemsResponse>> {
-    return apiClient.get<DSATopicProblemsResponse>(`/roadmap/dsa/topic/${topicId}/problems`);
+  async getDSATopicProblems(topicId: string): Promise<DSATopicProblemsResponse> {
+    try {
+      const response = await apiClient.get<DSATopicProblemsResponse>(`/roadmap/dsa/topic/${topicId}/problems`);
+      if (response.success && response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error(`Error fetching problems for topic ${topicId}:`, error);
+    }
+    return {
+      topic_id: topicId,
+      topic_name: '',
+      total_problems: 0,
+      problems: [],
+    };
   }
 
   /**
@@ -182,8 +259,19 @@ class DSARoadmapService {
    * Admin endpoint to seed/reseed the DSA roadmap
    * Requires admin role
    */
-  async seedDSARoadmap(): Promise<ApiResponse<{ message: string; output: string }>> {
-    return apiClient.post('/roadmap/dsa/seed', {});
+  async seedDSARoadmap(): Promise<{ message: string; output: string }> {
+    try {
+      const response = await apiClient.post<{ message: string; output: string }>('/roadmap/dsa/seed', {});
+      if (response.success && response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error seeding DSA roadmap:', error);
+    }
+    return {
+      message: 'Failed to seed roadmap',
+      output: '',
+    };
   }
 }
 

@@ -12,6 +12,8 @@ const {
   Problem,
   Topic,
   PlatformIntegration,
+  UserSubmission,
+  Submission,
 } = require('../src/models');
 
 const seedDatabase = async () => {
@@ -321,6 +323,171 @@ const seedDatabase = async () => {
       },
     ]);
     console.log(`Created ${integrations.length} platform integrations`);
+
+    // ========== CREATE USER SUBMISSIONS (Solved Problems) ==========
+    // John Doe - LeetCode: 45 solved problems
+    const leetcodeSubmissionsJohn = [
+      // Easy: 25 problems
+      { problemId: problems[0]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 45, memoryUsed: 12.4, attempts: 1, timestamp: new Date('2026-01-15') },
+      { problemId: problems[1]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 32, memoryUsed: 8.2, attempts: 2, timestamp: new Date('2026-01-18') },
+      { problemId: problems[2]._id, platform: 'leetcode', verdict: 'accepted', language: 'javascript', runtimeMs: 56, memoryUsed: 14.5, attempts: 1, timestamp: new Date('2026-01-20') },
+      { problemId: problems[3]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 38, memoryUsed: 9.1, attempts: 3, timestamp: new Date('2026-01-22') },
+      { problemId: problems[4]._id, platform: 'leetcode', verdict: 'accepted', language: 'javascript', runtimeMs: 51, memoryUsed: 11.3, attempts: 1, timestamp: new Date('2026-01-25') },
+      { problemId: problems[5]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 44, memoryUsed: 12.8, attempts: 2, timestamp: new Date('2026-01-28') },
+      { problemId: problems[6]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 68, memoryUsed: 15.2, attempts: 1, timestamp: new Date('2026-02-01') },
+      { problemId: problems[7]._id, platform: 'leetcode', verdict: 'accepted', language: 'javascript', runtimeMs: 48, memoryUsed: 10.5, attempts: 1, timestamp: new Date('2026-02-03') },
+      { problemId: problems[8]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 72, memoryUsed: 16.1, attempts: 2, timestamp: new Date('2026-02-05') },
+      { problemId: problems[9]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 52, memoryUsed: 13.2, attempts: 1, timestamp: new Date('2026-02-08') },
+      { problemId: problems[10]._id, platform: 'leetcode', verdict: 'accepted', language: 'javascript', runtimeMs: 95, memoryUsed: 18.5, attempts: 3, timestamp: new Date('2026-02-10') },
+      { problemId: problems[11]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 41, memoryUsed: 9.8, attempts: 1, timestamp: new Date('2026-02-12') },
+
+      // Medium: 15 problems
+      { problemId: problems[18]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 125, memoryUsed: 22.5, attempts: 4, timestamp: new Date('2026-01-20') },
+      { problemId: problems[19]._id, platform: 'leetcode', verdict: 'accepted', language: 'javascript', runtimeMs: 148, memoryUsed: 25.3, attempts: 3, timestamp: new Date('2026-02-02') },
+      { problemId: problems[20]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 156, memoryUsed: 28.1, attempts: 2, timestamp: new Date('2026-02-07') },
+      { problemId: problems[21]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 118, memoryUsed: 20.4, attempts: 5, timestamp: new Date('2026-02-09') },
+      { problemId: problems[22]._id, platform: 'leetcode', verdict: 'accepted', language: 'javascript', runtimeMs: 162, memoryUsed: 29.5, attempts: 2, timestamp: new Date('2026-02-11') },
+
+      // Hard: 5 problems
+      { problemId: problems[33]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 285, memoryUsed: 45.2, attempts: 8, timestamp: new Date('2026-02-04') },
+      { problemId: problems[34]._id, platform: 'leetcode', verdict: 'accepted', language: 'javascript', runtimeMs: 312, memoryUsed: 52.3, attempts: 6, timestamp: new Date('2026-02-06') },
+    ];
+
+    // John Doe - CodeForces: 20 solved problems
+    const codeforceSubmissionsJohn = [
+      { problemId: problems[43]._id, platform: 'codeforces', verdict: 'accepted', language: 'cpp', runtimeMs: 78, memoryUsed: 8192, attempts: 1, timestamp: new Date('2026-01-10') },
+      { problemId: problems[29]._id, platform: 'codeforces', verdict: 'accepted', language: 'python', runtimeMs: 92, memoryUsed: 9216, attempts: 2, timestamp: new Date('2026-01-25') },
+      { problemId: problems[30]._id, platform: 'codeforces', verdict: 'accepted', language: 'cpp', runtimeMs: 156, memoryUsed: 12288, attempts: 1, timestamp: new Date('2026-02-01') },
+      { problemId: problems[31]._id, platform: 'codeforces', verdict: 'accepted', language: 'python', runtimeMs: 124, memoryUsed: 10240, attempts: 3, timestamp: new Date('2026-02-08') },
+      { problemId: problems[32]._id, platform: 'codeforces', verdict: 'accepted', language: 'cpp', runtimeMs: 98, memoryUsed: 8960, attempts: 1, timestamp: new Date('2026-02-10') },
+    ];
+
+    // Jane Smith - LeetCode: 32 solved problems
+    const leetcodeSubmissionsJane = [
+      { problemId: problems[0]._id, platform: 'leetcode', verdict: 'accepted', language: 'java', runtimeMs: 52, memoryUsed: 13.2, attempts: 2, timestamp: new Date('2026-02-02') },
+      { problemId: problems[1]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 38, memoryUsed: 8.9, attempts: 1, timestamp: new Date('2026-02-05') },
+      { problemId: problems[2]._id, platform: 'leetcode', verdict: 'accepted', language: 'java', runtimeMs: 61, memoryUsed: 15.3, attempts: 1, timestamp: new Date('2026-02-07') },
+      { problemId: problems[3]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 44, memoryUsed: 9.5, attempts: 2, timestamp: new Date('2026-02-09') },
+      { problemId: problems[4]._id, platform: 'leetcode', verdict: 'wrong_answer', language: 'java', runtimeMs: 58, memoryUsed: 14.1, attempts: 1, timestamp: new Date('2026-02-11') },
+      { problemId: problems[5]._id, platform: 'leetcode', verdict: 'accepted', language: 'python', runtimeMs: 49, memoryUsed: 11.8, attempts: 3, timestamp: new Date('2026-02-12') },
+      { problemId: problems[6]._id, platform: 'leetcode', verdict: 'accepted', language: 'java', runtimeMs: 73, memoryUsed: 16.5, attempts: 1, timestamp: new Date('2026-02-13') },
+    ];
+
+    // Jane Smith - HackerRank: 18 solved problems
+    const hackerrankSubmissionsJane = [
+      { problemId: problems[10]._id, platform: 'hackerrank', verdict: 'accepted', language: 'python', runtimeMs: 105, memoryUsed: 18.5, attempts: 2, timestamp: new Date('2026-01-28') },
+      { problemId: problems[11]._id, platform: 'hackerrank', verdict: 'accepted', language: 'java', runtimeMs: 118, memoryUsed: 19.2, attempts: 1, timestamp: new Date('2026-02-03') },
+      { problemId: problems[12]._id, platform: 'hackerrank', verdict: 'accepted', language: 'python', runtimeMs: 89, memoryUsed: 15.3, attempts: 3, timestamp: new Date('2026-02-05') },
+    ];
+
+    // Create UserSubmission records with comprehensive data
+    const userSubmissions = [];
+
+    // John Doe - LeetCode submissions
+    for (const sub of leetcodeSubmissionsJohn) {
+      userSubmissions.push({
+        userId: users[0]._id,
+        problemId: sub.problemId,
+        platform: sub.platform,
+        platformSubmissionId: `${sub.platform}_${sub.problemId}_${Math.random()}`,
+        attempts: sub.attempts,
+        isSolved: sub.verdict === 'accepted',
+        solveTime: Math.floor(Math.random() * 3600) + 300, // 5 min to 1 hour
+        language: sub.language,
+        hintsUsed: Math.floor(Math.random() * 3),
+        runtimeMs: sub.runtimeMs,
+        memoryUsed: sub.memoryUsed,
+        verdict: sub.verdict,
+        lastAttemptTime: sub.timestamp,
+        firstAttemptTime: new Date(sub.timestamp.getTime() - Math.random() * 86400000),
+      });
+    }
+
+    // John Doe - CodeForces submissions
+    for (const sub of codeforceSubmissionsJohn) {
+      userSubmissions.push({
+        userId: users[0]._id,
+        problemId: sub.problemId,
+        platform: sub.platform,
+        platformSubmissionId: `${sub.platform}_${sub.problemId}_${Math.random()}`,
+        attempts: sub.attempts,
+        isSolved: sub.verdict === 'accepted',
+        solveTime: Math.floor(Math.random() * 5400) + 300, // 5 min to 1.5 hours
+        language: sub.language,
+        hintsUsed: 0,
+        runtimeMs: sub.runtimeMs,
+        memoryUsed: sub.memoryUsed,
+        verdict: sub.verdict,
+        lastAttemptTime: sub.timestamp,
+        firstAttemptTime: new Date(sub.timestamp.getTime() - Math.random() * 172800000),
+      });
+    }
+
+    // Jane Smith - LeetCode submissions
+    for (const sub of leetcodeSubmissionsJane) {
+      userSubmissions.push({
+        userId: users[1]._id,
+        problemId: sub.problemId,
+        platform: sub.platform,
+        platformSubmissionId: `${sub.platform}_${sub.problemId}_${Math.random()}`,
+        attempts: sub.attempts,
+        isSolved: sub.verdict === 'accepted',
+        solveTime: Math.floor(Math.random() * 3600) + 300,
+        language: sub.language,
+        hintsUsed: Math.floor(Math.random() * 2),
+        runtimeMs: sub.runtimeMs,
+        memoryUsed: sub.memoryUsed,
+        verdict: sub.verdict,
+        lastAttemptTime: sub.timestamp,
+        firstAttemptTime: new Date(sub.timestamp.getTime() - Math.random() * 86400000),
+      });
+    }
+
+    // Jane Smith - HackerRank submissions
+    for (const sub of hackerrankSubmissionsJane) {
+      userSubmissions.push({
+        userId: users[1]._id,
+        problemId: sub.problemId,
+        platform: sub.platform,
+        platformSubmissionId: `${sub.platform}_${sub.problemId}_${Math.random()}`,
+        attempts: sub.attempts,
+        isSolved: sub.verdict === 'accepted',
+        solveTime: Math.floor(Math.random() * 4800) + 300,
+        language: sub.language,
+        hintsUsed: Math.floor(Math.random() * 3),
+        runtimeMs: sub.runtimeMs,
+        memoryUsed: sub.memoryUsed,
+        verdict: sub.verdict,
+        lastAttemptTime: sub.timestamp,
+        firstAttemptTime: new Date(sub.timestamp.getTime() - Math.random() * 172800000),
+      });
+    }
+
+    const submissionRecords = await UserSubmission.insertMany(userSubmissions);
+    console.log(`Created ${submissionRecords.length} user submissions (solved problems)`);
+
+    // Also create Submission records for dashboard compatibility
+    const submissionData = [];
+    for (const sub of submissionRecords.slice(0, 20)) {
+      submissionData.push({
+        userId: sub.userId,
+        problemId: sub.problemId,
+        solved: sub.isSolved,
+        attempts: sub.attempts,
+        timeTaken: sub.solveTime,
+        hintUsed: sub.hintsUsed > 0,
+        hintCount: sub.hintsUsed,
+        language: sub.language,
+        runtime: sub.runtimeMs,
+        memory: sub.memoryUsed,
+        score: sub.isSolved ? 100 : 0,
+      });
+    }
+
+    if (submissionData.length > 0) {
+      await Submission.insertMany(submissionData);
+      console.log(`Created ${submissionData.length} submission records`);
+    }
 
     console.log('\n✅ Database seeded successfully!');
     console.log('\nTest Credentials:');

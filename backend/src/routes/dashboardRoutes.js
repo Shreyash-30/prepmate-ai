@@ -8,27 +8,39 @@ const router = express.Router();
 router.use(authMiddleware);
 
 /**
- * GET /api/dashboard/readiness
- * Get overall readiness score by category
+ * GET /api/dashboard/summary
+ * High-level overview: problems solved, platforms synced, completion metrics
  */
-router.get('/readiness', dashboardController.getReadiness);
-
-/**
- * GET /api/dashboard/tasks/today
- * Get today's recommended tasks
- */
-router.get('/tasks/today', dashboardController.getTodayTasks);
-
-/**
- * GET /api/dashboard/weak-topics
- * Get list of weak topics
- */
-router.get('/weak-topics', dashboardController.getWeakTopics);
+router.get('/summary', dashboardController.getSummary);
 
 /**
  * GET /api/dashboard/activity
- * Get daily activity chart data
+ * Real activity timeline: submissions, competitions over time
  */
 router.get('/activity', dashboardController.getActivity);
+
+/**
+ * GET /api/dashboard/intelligence
+ * AI-powered intelligence: readiness, completeness, consistency, improvement velocity
+ */
+router.get('/intelligence', dashboardController.getIntelligence);
+
+/**
+ * GET /api/dashboard/today-tasks
+ * Real tasks from database with weak topic recommendations
+ */
+router.get('/today-tasks', dashboardController.getTodayTasks);
+
+/**
+ * GET /api/dashboard/readiness-trend
+ * Historical readiness trend for chart visualization
+ */
+router.get('/readiness-trend', dashboardController.getReadinessTrend);
+
+/**
+ * GET /api/dashboard/mastery-growth
+ * Mastery progression by topic
+ */
+router.get('/mastery-growth', dashboardController.getMasteryGrowth);
 
 module.exports = router;

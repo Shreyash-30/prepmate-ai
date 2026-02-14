@@ -8,6 +8,7 @@ const leetcodeSyncService = require('../services/leetcodeSyncService');
 const manualUploadService = require('../services/manualUploadService');
 const IntegrationMetadata = require('../models/IntegrationMetadata');
 const SyncLog = require('../models/SyncLog');
+const logger = require('../utils/logger');
 
 /**
  * POST /api/integrations/codeforces/sync
@@ -355,4 +356,249 @@ exports.getLastSync = async (req, res) => {
       error: error.message,
     });
   }
+};
+
+/**
+ * POST /api/integrations/connect
+ * Connect a new platform integration
+ * Body: { platform: string, username: string }
+ */
+exports.connectPlatform = async (req, res) => {
+  try {
+    const { platform, username } = req.body;
+    const userId = req.user._id;
+
+    if (!platform || !username) {
+      return res.status(400).json({
+        success: false,
+        error: 'platform and username are required',
+      });
+    }
+
+    // Validate username format
+    const ingestionValidationService = require('../services/ingestionValidationService');
+    try {
+      await ingestionValidationService.validateUsername(platform, username);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    // Create or update integration metadata
+    const integration = await IntegrationMetadata.findOneAndUpdate(
+      { userId, platform },
+      {
+        userId,
+        platform,
+        platformUsername: username,
+        isConnected: true,
+        syncStatus: 'idle',
+        lastConnectionCheck: new Date(),
+      },
+      { upsert: true, new: true }
+    );
+
+    return res.json({
+      success: true,
+      message: `${platform} connected successfully`,
+      data: {
+        integration: {
+          platform: integration.platform,
+          username: integration.platformUsername,
+          isConnected: integration.isConnected,
+          connectedAt: integration.createdAt,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Platform connection error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to connect platform',
+    });
+  }
+};
+
+/**
+ * GET /api/integrations/sync-progress
+ * Get current and recent sync progress
+ * Query: { platform?: string }
+ */
+exports.getSyncProgress = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { platform } = req.query;
+
+    let query = { userId };
+    if (platform) {
+      query.platform = platform;
+    }
+
+    const syncLogs = await SyncLog.find(query)
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    const progress = {
+      current: null,
+      recent: [],
+    };
+
+    // Get current sync (if any)
+    const integrations = await IntegrationMetadata.find(query).lean();
+
+    for (const integration of integrations) {
+      if (integration.syncStatus === 'syncing') {
+        const currentSync = syncLogs.find(log =>
+          log.platform === integration.platform && log.status === 'in_progress'
+        );
+
+        if (currentSync) {
+          progress.current = {
+            platform: integration.platform,
+            status: 'syncing',
+            startedAt: currentSync.startTime,
+            estimatedTimeRemaining: exports.estimateSyncDuration(integration.platform),
+            recordsProcessed: currentSync.processedRecords || 0,
+            recordsInserted: currentSync.insertedRecords || 0,
+          };
+        }
+      }
+    }
+
+    // Get recent syncs
+    progress.recent = syncLogs.map(log => ({
+      platform: log.platform,
+      status: log.status,
+      timestamp: log.endTime || log.startTime,
+      recordsInserted: log.insertedRecords,
+      recordsSkipped: log.skippedRecords,
+      duration: log.durationMs,
+      errors: log.errors ? log.errors.slice(0, 3) : [],
+    }));
+
+    return res.json({
+      success: true,
+      data: progress,
+    });
+  } catch (error) {
+    console.error('Get sync progress error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * POST /api/integrations/sync-now
+ * Immediately trigger sync for a platform
+ * Body: { platform: string }
+ */
+exports.syncNow = async (req, res) => {
+  try {
+    const { platform } = req.body;
+    const userId = req.user._id;
+
+    if (!platform) {
+      return res.status(400).json({
+        success: false,
+        error: 'platform is required',
+      });
+    }
+
+    // Get integration
+    const integration = await IntegrationMetadata.findOne({ userId, platform });
+
+    if (!integration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Integration not found',
+      });
+    }
+
+    if (!integration.isConnected) {
+      return res.status(400).json({
+        success: false,
+        error: 'Integration is not connected',
+      });
+    }
+
+    // Check rate limit
+    const ingestionValidationService = require('../services/ingestionValidationService');
+    const rateLimit = await ingestionValidationService.checkRateLimit(userId, platform);
+
+    if (!rateLimit.isAllowed) {
+      return res.status(429).json({
+        success: false,
+        error: rateLimit.message || 'Too many requests',
+        retryAfter: rateLimit.retryAfter,
+      });
+    }
+
+    // Trigger sync based on platform
+    let syncPromise;
+
+    if (platform === 'codeforces') {
+      syncPromise = codeforcesSyncService.syncUserData(
+        userId,
+        integration.platformUsername,
+        'incremental'
+      );
+    } else if (platform === 'leetcode') {
+      syncPromise = leetcodeSyncService.syncUserData(
+        userId,
+        integration.platformUsername,
+        'incremental'
+      );
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Platform sync not supported',
+      });
+    }
+
+    // Run sync in background and aggregate results
+    syncPromise
+      .then(async result => {
+        const telemetryAggregationService = require('../services/telemetryAggregationService');
+        const aggregation = await telemetryAggregationService.aggregateSyncResults(result, userId);
+        logger.info(`✅ Sync and aggregation complete for ${platform}`, aggregation);
+      })
+      .catch(error => {
+        logger.error(`Sync failed for ${platform}:`, error);
+      });
+
+    return res.json({
+      success: true,
+      message: 'Sync triggered. Check back in a moment for results.',
+      data: {
+        platform,
+        status: 'syncing',
+        estimatedDuration: exports.estimateSyncDuration(platform),
+      },
+    });
+  } catch (error) {
+    console.error('Sync now error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to trigger sync',
+    });
+  }
+};
+
+/**
+ * Helper: Estimate sync duration by platform (in seconds)
+ */
+exports.estimateSyncDuration = (platform) => {
+  const estimates = {
+    codeforces: 30,
+    leetcode: 20,
+    hackerrank: 25,
+    geeksforgeeks: 20,
+  };
+
+  return estimates[platform] || 30;
 };

@@ -20,18 +20,17 @@ export default function RoadmapPage() {
   const [selectedLayer, setSelectedLayer] = useState<LayerType | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<DSALayerTopic | null>(null);
 
-  const { data: roadmapQuery, isLoading } = useQuery({
+  const { data: roadmap = { roadmap_name: 'DSA Roadmap', layers: [], stats: { total_topics: 0, total_estimated_hours: 0, total_weight: 0, average_interview_frequency: 0 } }, isLoading } = useQuery({
     queryKey: ['dsa-roadmap'],
     queryFn: () => dsaRoadmapService.getFullDSARoadmap(),
   });
 
-  const { data: problemsQuery } = useQuery({
+  const { data: problemsData } = useQuery({
     queryKey: ['topic-problems', selectedTopic?.topic_id],
     queryFn: () => dsaRoadmapService.getDSATopicProblems(selectedTopic!.topic_id),
     enabled: !!selectedTopic,
   });
 
-  const roadmap = roadmapQuery?.data;
   const allLayers = roadmap?.layers || [];
   
   // Layer metadata for UI
@@ -67,7 +66,7 @@ export default function RoadmapPage() {
     ? allLayers.filter(l => l.layer_name === selectedLayer)
     : allLayers;
   
-  const totalTopics = roadmap?.stats.total_topics || 0;
+  const totalTopics = roadmap?.stats?.total_topics || 0;
   const completedTopics = allLayers
     .flatMap(l => l.topics)
     .filter(t => (t.user_mastery || 0) >= 0.7).length;
@@ -117,7 +116,7 @@ export default function RoadmapPage() {
   return (
     <div className="space-y-6 lg:space-y-8">
       <SectionHeader
-        title={roadmap.roadmap_name}
+        title={roadmap?.roadmap_name || 'DSA Roadmap'}
         subtitle="Master essential DSA topics with guided progression"
         action={
           <div className="text-right">
@@ -157,7 +156,7 @@ export default function RoadmapPage() {
       <div>
         <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <Layers className="h-4 w-4" />
-          Roadmap Layers ({roadmap.stats.average_interview_frequency}% avg frequency)
+          Roadmap Layers ({roadmap?.stats?.average_interview_frequency || 0}% avg frequency)
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <button
@@ -342,11 +341,11 @@ export default function RoadmapPage() {
 
               {/* Problems Section */}
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Practice Problems ({problemsQuery?.data?.total_problems || 0})</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Practice Problems ({problemsData?.total_problems || 0})</h3>
                 
-                {problemsQuery?.data?.problems && problemsQuery.data.problems.length > 0 ? (
+                {problemsData?.problems && problemsData.problems.length > 0 ? (
                   <div className="space-y-3">
-                    {problemsQuery.data.problems.map((problem) => (
+                    {problemsData.problems.map((problem) => (
                       <a
                         key={problem.problem_id}
                         href={problem.url}
@@ -389,7 +388,7 @@ export default function RoadmapPage() {
                       </a>
                     ))}
                   </div>
-                ) : problemsQuery?.data ? (
+                ) : problemsData ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No problems mapped to this topic yet</p>
                   </div>

@@ -73,10 +73,31 @@ router.post('/manual/entry', integrationsController.addManualEntry);
 // ====== General Integration Management ======
 
 /**
+ * POST /api/integrations/connect
+ * Connect a new platform integration
+ * Body: { platform: string, username: string }
+ */
+router.post('/connect', integrationsController.connectPlatform);
+
+/**
+ * POST /api/integrations/sync-now
+ * Immediately trigger sync for a platform
+ * Body: { platform: string }
+ */
+router.post('/sync-now', integrationsController.syncNow);
+
+/**
  * GET /api/integrations/status
  * Get status of all integrations for user
  */
 router.get('/status', integrationsController.getIntegrationStatus);
+
+/**
+ * GET /api/integrations/sync-progress
+ * Get current and recent sync progress
+ * Query: { platform?: string }
+ */
+router.get('/sync-progress', integrationsController.getSyncProgress);
 
 /**
  * GET /api/integrations/sync-history

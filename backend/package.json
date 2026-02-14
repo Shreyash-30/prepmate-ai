@@ -35,6 +35,7 @@
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "redis": "^5.10.0"
   },
   "devDependencies": {

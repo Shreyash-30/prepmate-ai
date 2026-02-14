@@ -471,16 +471,19 @@ const seedDSARoadmap = async () => {
     await mongoose.connect(mongoURI);
     console.log('✅ Connected to MongoDB');
 
-    // Check if DSA roadmap already exists
-    const existingRoadmap = await Roadmap.findOne({ subject: 'DSA', isOfficial: true });
+    // Delete ALL existing DSA roadmaps and their topics
+    const existingRoadmaps = await Roadmap.find({ subject: 'DSA', isOfficial: true });
     
-    if (existingRoadmap) {
-      console.log('⚠️  DSA Roadmap already exists. Backing up and replacing...');
-      // You could implement versioning here
+    if (existingRoadmaps.length > 0) {
+      console.log(`⚠️  Found ${existingRoadmaps.length} existing DSA Roadmap(s). Cleaning up...`);
+      
+      // Delete all topics associated with all existing DSA roadmaps
+      for (const roadmap of existingRoadmaps) {
+        await RoadmapTopic.deleteMany({ roadmapId: roadmap._id });
+        await Roadmap.deleteOne({ _id: roadmap._id });
+      }
+      console.log('✅ Cleaned up old roadmaps and topics');
     }
-
-    // Clear existing DSA topics
-    await RoadmapTopic.deleteMany({ roadmapId: existingRoadmap?._id });
     
     // Create DSA Roadmap
     const dsaRoadmap = await Roadmap.create({

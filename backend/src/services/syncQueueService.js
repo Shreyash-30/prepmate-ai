@@ -10,6 +10,7 @@ const leetcodeSyncService = require('./leetcodeSyncService');
 const hackerrankSyncService = require('./hackerrankSyncService');
 const geeksforGeeksSyncService = require('./geeksforGeeksSyncService');
 const manualUploadService = require('./manualUploadService');
+const telemetryAggregationService = require('./telemetryAggregationService');
 const SyncLog = require('../models/SyncLog');
 const IntegrationMetadata = require('../models/IntegrationMetadata');
 
@@ -101,8 +102,22 @@ class SyncQueueService {
   setupEventListeners(platform) {
     const queue = this.queues[platform];
 
-    queue.on('completed', (job, result) => {
+    queue.on('completed', async (job, result) => {
       console.log(`✅ ${platform} sync completed: ${job.id}`);
+      
+      // Trigger telemetry aggregation post-sync
+      try {
+        const aggregationResult = await telemetryAggregationService.aggregateSyncResults(
+          result,
+          job.data.userId
+        );
+        console.log(`✅ Telemetry aggregation triggered for user ${job.data.userId}`);
+        console.log(`  - Submissions processed: ${aggregationResult.stats.submissionsProcessed}`);
+        console.log(`  - Contests processed: ${aggregationResult.stats.contestsProcessed}`);
+        console.log(`  - AI pipeline triggered: ${aggregationResult.tasks.includes('ai_pipeline_triggered')}`);
+      } catch (error) {
+        console.error(`⚠️ Telemetry aggregation failed for user ${job.data.userId}:`, error.message);
+      }
     });
 
     queue.on('failed', (job, err) => {
