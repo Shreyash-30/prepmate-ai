@@ -6,6 +6,7 @@
 
 import { apiClient } from './apiClient';
 import { useAuthStore } from '@/store/authStore';
+import { userDataService } from './userDataService';
 import type { User } from '@/types';
 
 export interface SessionVerifyResponse {
@@ -27,6 +28,8 @@ class SessionService {
 
     // If no token is stored, session is not initialized
     if (!token) {
+      // Ensure store is cleared
+      authStore.setToken('');
       return;
     }
 
@@ -39,6 +42,9 @@ class SessionService {
       if (response.success && response.data?.user) {
         // Token is valid, update store with fresh user data
         authStore.setUser(response.data.user);
+        
+        // Fetch user telemetry data for restored session
+        await userDataService.fetchUserDataAfterLogin();
       } else {
         // Token verification failed, clear authentication
         if (response.error) {

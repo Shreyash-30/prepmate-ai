@@ -14,6 +14,9 @@ const {
   PlatformIntegration,
   UserSubmission,
   Submission,
+  ReadinessScore,
+  MasteryMetric,
+  WeakTopicSignal,
 } = require('../src/models');
 
 const seedDatabase = async () => {
@@ -487,6 +490,78 @@ const seedDatabase = async () => {
     if (submissionData.length > 0) {
       await Submission.insertMany(submissionData);
       console.log(`Created ${submissionData.length} submission records`);
+    }
+
+    // Create ReadinessScore records for test users
+    const readinessScores = users.map(user => ({
+      userId: user._id,
+      overallReadinessScore: 65 + Math.random() * 30, // 65-95
+      readinessLevel: 'somewhat-ready',
+      readinessTrend: 'improving',
+      topStrengths: ['Arrays', 'Hash Tables', 'Two Pointers'],
+      topWeaknesses: ['Dynamic Programming', 'Graph Algorithms'],
+      recommendedFocus: ['DP', 'Graphs'],
+      calculatedAt: new Date(),
+      trendData: [
+        { date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), score: 55 },
+        { date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), score: 62 },
+        { date: new Date(), score: 65 + Math.random() * 30 },
+      ],
+    }));
+    await ReadinessScore.insertMany(readinessScores);
+    console.log(`Created ${readinessScores.length} readiness scores`);
+
+    // Create MasteryMetric records for topics
+    const masteryMetrics = [];
+    for (const user of users.slice(0, 2)) {
+      for (const topic of topics) {
+        const topicProblemCount = 5 + Math.floor(Math.random() * 15); // 5-20 problems attempted
+        const solvedCount = Math.floor(topicProblemCount * (0.5 + Math.random() * 0.5)); // 50-100% pass rate
+        
+        masteryMetrics.push({
+          userId: user._id,
+          topicId: topic._id,
+          topicName: topic.name,
+          masteryScore: (solvedCount / topicProblemCount) * 100,
+          problemsAttempted: topicProblemCount,
+          problemsSolved: solvedCount,
+          averageAttempts: 1 + Math.random() * 3,
+          lastPracticedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+          consistencyIndex: 60 + Math.random() * 40,
+          calculatedAt: new Date(),
+        });
+      }
+    }
+    if (masteryMetrics.length > 0) {
+      await MasteryMetric.insertMany(masteryMetrics);
+      console.log(`Created ${masteryMetrics.length} mastery metrics`);
+    }
+
+    // Create WeakTopicSignal records
+    const weakTopics = [];
+    for (const user of users.slice(0, 2)) {
+      // Pick 2-3 random topics as weak areas
+      const weaknessCount = 2 + Math.floor(Math.random() * 2);
+      const shuffledTopics = topics.sort(() => Math.random() - 0.5).slice(0, weaknessCount);
+      
+      for (const topic of shuffledTopics) {
+        weakTopics.push({
+          userId: user._id,
+          topicId: topic._id,
+          topicName: topic.name,
+          riskScore: 65 + Math.random() * 35, // 65-100
+          riskLevel: ['high', 'critical'][Math.floor(Math.random() * 2)],
+          mistakePatterns: ['Off-by-one errors', 'Edge case handling'],
+          lastFailedDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
+          failureRate: 30 + Math.random() * 40, // 30-70%
+          signalTypes: ['low-accuracy', 'high-attemptcount'],
+          detectedAt: new Date(),
+        });
+      }
+    }
+    if (weakTopics.length > 0) {
+      await WeakTopicSignal.insertMany(weakTopics);
+      console.log(`Created ${weakTopics.length} weak topic signals`);
     }
 
     console.log('\n✅ Database seeded successfully!');

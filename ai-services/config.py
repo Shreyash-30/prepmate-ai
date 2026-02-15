@@ -1,22 +1,35 @@
 """
 Configuration settings for AI Services
+Loads environment variables from central .env file at project root
 """
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+
+# Load from root .env file (parent directory of ai-services)
+root_dir = Path(__file__).parent.parent
+root_env_path = root_dir / '.env'
+
+if root_env_path.exists():
+    load_dotenv(dotenv_path=root_env_path, override=True)
+else:
+    print(f"Warning: Root .env file not found at {root_env_path}")
+    print("Using default environment variables or .env from current directory")
 
 
 class Settings(BaseSettings):
-    """Application settings from environment variables"""
+    """Application settings from environment variables (sourced from root .env)"""
 
     # API Configuration
-    app_name: str = "Prepmate AI Services"
-    app_version: str = "1.0.0"
-    environment: str = os.getenv("ENV", "development")
-    debug: bool = environment == "development"
+    app_name: str = os.getenv("VITE_APP_NAME", "PrepMate AI Services")
+    app_version: str = os.getenv("VITE_APP_VERSION", "1.0.0")
+    environment: str = os.getenv("NODE_ENV", "development")
+    debug: bool = os.getenv("VITE_DEBUG_MODE", "false").lower() == "true"
 
     # Server Configuration
-    host: str = os.getenv("HOST", "0.0.0.0")
-    port: int = int(os.getenv("PORT", "8000"))
+    host: str = os.getenv("AI_SERVICE_HOST", "0.0.0.0")
+    port: int = int(os.getenv("AI_SERVICE_PORT", "8000"))
 
     # Gemini API Configuration
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
@@ -27,19 +40,18 @@ class Settings(BaseSettings):
     # MongoDB Configuration
     mongo_uri: str = os.getenv(
         "MONGO_URI",
-        "mongodb://localhost:27017/prepmate_ai"
+        "mongodb://localhost:27017/prepmate-ai"
     )
     mongo_db_name: str = "prepmate_ai"
 
     # CORS Configuration
     allowed_origins: list = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://localhost:5000"
+        origin.strip() 
+        for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost:5000").split(',')
     ]
 
     # Backend API Configuration
-    backend_url: str = os.getenv("BACKEND_URL", "http://localhost:5000")
+    backend_url: str = os.getenv("VITE_API_BASE_URL", "http://localhost:5000/api")
 
     # Logging Configuration
     log_level: str = os.getenv("LOG_LEVEL", "INFO")

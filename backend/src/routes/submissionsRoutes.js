@@ -14,6 +14,25 @@ const router = express.Router();
 router.use(authMiddleware);
 
 /**
+ * GET /api/submissions
+ * Get user submissions (main endpoint for dashboard)
+ * Query: ?limit=100&sort=-createdAt
+ */
+router.get('/', asyncHandler(submissionsController.getUserSubmissions));
+
+/**
+ * POST /api/submissions/create
+ * Create a new submission and queue for intelligence
+ */
+router.post('/create', asyncHandler(submissionsController.createSubmission));
+
+/**
+ * POST /api/submissions/sync
+ * Bulk create submissions from platform sync
+ */
+router.post('/sync', asyncHandler(submissionsController.bulkCreateSubmissions));
+
+/**
  * GET /api/submissions/user/solved
  * Get all problems solved by authenticated user
  * Query: ?platform=leetcode&difficulty=easy&limit=20&page=1

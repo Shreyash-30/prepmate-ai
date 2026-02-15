@@ -4,10 +4,6 @@ module.exports = {
   PlatformIntegration: require('./PlatformIntegration'),
   Problem: require('./Problem'),
   Submission: require('./Submission'),
-  Roadmap: require('./Roadmap'),
-  RoadmapTopic: require('./RoadmapTopic'),
-  RoadmapTopicProblem: require('./RoadmapTopicProblem'),
-  UserRoadmapProgress: require('./UserRoadmapProgress'),
   MasteryMetric: require('./MasteryMetric'),
   WeakTopicSignal: require('./WeakTopicSignal'),
   PreparationTask: require('./PreparationTask'),
@@ -24,4 +20,6 @@ module.exports = {
   UserContest: require('./UserContest'),
   SyncLog: require('./SyncLog'),
   IntegrationMetadata: require('./IntegrationMetadata'),
+  UserPreparationCompliance: require('./UserPreparationCompliance'),
+  AutomationStatus: require('./AutomationStatus'),
 };

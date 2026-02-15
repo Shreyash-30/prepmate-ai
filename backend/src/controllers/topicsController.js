@@ -1,10 +1,10 @@
 /**
- * Roadmap Topics Controller
+ * Topics Controller
  * Handles topic-level operations: listing by category, updating progress
  */
 
 const UserTopicStats = require('../models/UserTopicStats');
-const RoadmapTopic = require('../models/RoadmapTopic');
+const Topic = require('../models/Topic');
 
 /**
  * Helper to convert mastery score to level
@@ -17,7 +17,7 @@ const getMasteryLevel = (mastery) => {
 };
 
 /**
- * GET /api/roadmap/topics?category=DSA
+ * GET /api/topics?category=DSA
  * Get topics by category with user's progress
  */
 exports.getTopicsByCategory = async (req, res) => {
@@ -31,23 +31,10 @@ exports.getTopicsByCategory = async (req, res) => {
       });
     }
 
-    // Try to get topics from multiple sources
-    const Topic = require('../models/Topic');
-
-    // Get standalone topics for custom roadmaps
-    let topics = await Topic.find({
+    // Get topics by category
+    const topics = await Topic.find({
       category: { $regex: category, $options: 'i' },
     }).limit(20);
-
-    // If no standalone topics, get RoadmapTopics
-    if (topics.length === 0) {
-      topics = await RoadmapTopic.find({
-        $or: [
-          { name: { $regex: category, $options: 'i' } },
-          { concepts: { $in: [category] } },
-        ],
-      }).limit(20);
-    }
 
     // Get user's stats for these topics
     const topicsWithProgress = await Promise.all(
@@ -84,7 +71,7 @@ exports.getTopicsByCategory = async (req, res) => {
 };
 
 /**
- * GET /api/roadmap/categories
+ * GET /api/topics/categories
  * Get all available topic categories
  */
 exports.getCategories = async (req, res) => {
@@ -112,7 +99,7 @@ exports.getCategories = async (req, res) => {
 };
 
 /**
- * PUT /api/roadmap/topics/:topicId
+ * PUT /api/topics/:topicId
  * Update user's progress on a topic
  */
 exports.updateTopicProgress = async (req, res) => {

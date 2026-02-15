@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from '@/modules/dashboard/components/Sidebar';
+import Sidebar from '@/components/layout/Sidebar';
 import FloatingMentor from '@/modules/mentor/components/FloatingMentor';
 import { cn } from '@/utils/utils';
 

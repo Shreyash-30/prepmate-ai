@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService } from '@/services/authService';
+import { userDataService } from '@/services/userDataService';
 import type { User } from '@/types';
 import { apiClient } from '@/services/apiClient';
 import { getErrorMessage } from '@/utils/errorUtils';
@@ -47,6 +48,12 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
             apiClient.setToken(response.data.token);
+            
+            // Fetch user data and trigger ML processing after login
+            await userDataService.fetchUserDataAfterLogin();
+            userDataService.triggerMLProcessing().catch(err => {
+              console.error('ML processing failed (non-critical):', err);
+            });
           } else {
             const errorMsg = getErrorMessage(response.error || 'Login failed');
             set({ error: errorMsg, isLoading: false });
@@ -69,6 +76,12 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
             apiClient.setToken(response.data.token);
+            
+            // Fetch user data and trigger ML processing after signup
+            await userDataService.fetchUserDataAfterLogin();
+            userDataService.triggerMLProcessing().catch(err => {
+              console.error('ML processing failed (non-critical):', err);
+            });
           } else {
             const errorMsg = getErrorMessage(response.error || 'Signup failed');
             set({ error: errorMsg, isLoading: false });
@@ -91,6 +104,8 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
           apiClient.clearToken();
+          // Clear cached user data on logout
+          userDataService.clearCachedData();
         }
       },
 
@@ -113,6 +128,11 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         if (state && state.token) {
           apiClient.setToken(state.token);
+        } else {
+          // Ensure isAuthenticated is false if there's no token
+          if (state) {
+            state.isAuthenticated = false;
+          }
         }
       },
     }

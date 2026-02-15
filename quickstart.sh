@@ -67,40 +67,19 @@ echo ""
 echo "🔧 Setting up environment..."
 echo ""
 
-# Check for .env file
-if [ ! -f "backend/.env" ]; then
-  echo -n "Creating backend/.env... "
-  cat > backend/.env << 'EOF'
-# MongoDB
-MONGODB_URI=mongodb://localhost:27017/prepmate
-
-# JWT
-JWT_SECRET=your-secret-key-here-change-in-production
-JWT_EXPIRY=7d
-
-# AI Services
-AI_SERVICES_URL=http://localhost:8000
-
-# Redis (for Bull queue)
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Platform APIs
-CODEFORCES_API=https://codeforces.com/api
-LEETCODE_API=https://leetcode.com/api
-HACKERRANK_API=https://www.hackerrank.com/rest
-GEEKSFORGEEKS_API=https://api.geeksforgeeks.org
-
-# Sync Configuration
-DEFAULT_SYNC_INTERVAL=0 * * * *
-QUEUE_MAX_RETRIES=3
-QUEUE_INITIAL_DELAY=2000
-NODE_ENV=development
-PORT=5000
-EOF
-  echo -e "${GREEN}Done${NC}"
+# Check for central .env file
+if [ ! -f ".env" ]; then
+  echo -n "Central .env file not found! Creating from .env.example... "
+  if [ -f ".env.example" ]; then
+    cp .env.example .env
+    echo -e "${GREEN}Done${NC}"
+    echo "⚠️  Please update .env with your configuration values"
+  else
+    echo -e "${RED}Failed${NC}"
+    echo ".env.example not found! Cannot create .env"
+  fi
 else
-  echo -e "✅ backend/.env already exists"
+  echo -e "✅ Central .env file exists"
 fi
 
 echo ""

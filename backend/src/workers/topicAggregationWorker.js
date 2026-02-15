@@ -7,7 +7,6 @@
 
 const BullQueue = require('bull');
 const topicAggregationService = require('../services/topicAggregationService');
-const userRoadmapProgressService = require('../services/userRoadmapProgressService');
 const UserSubmission = require('../models/UserSubmission');
 const logger = require('../utils/logger');
 
@@ -35,19 +34,14 @@ topicAggregationQueue.process(100, async (job) => {
       topicIds
     );
 
-    // After aggregation, recalculate all PCIs for this user
-    // This ensures roadmap progress reflects updated mastery estimates
-    const pciResults = await userRoadmapProgressService.recalculateUserAllPCIs(userId);
-
     job.progress(100);
 
     logger.info(
-      `[TopicAggregation] Completed: aggregated ${results.length} topics, updated ${pciResults.length} roadmaps`
+      `[TopicAggregation] Completed: aggregated ${results.length} topics`
     );
 
     return {
       aggregated_topics: results.length,
-      updated_roadmaps: pciResults.length,
       success: true,
     };
   } catch (error) {

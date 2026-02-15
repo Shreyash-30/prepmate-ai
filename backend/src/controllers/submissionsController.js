@@ -1,11 +1,93 @@
 /**
  * Submissions Controller
  * Handles fetching user submissions, solved problems, and progress tracking
+ * Integrates with unified intelligence pipeline
  */
 
 const UserSubmission = require('../models/UserSubmission');
 const Submission = require('../models/Submission');
 const Problem = require('../models/Problem');
+const { queueSubmissionIntelligence } = require('../workers/intelligenceWorker');
+
+/**
+ * POST /api/submissions/create
+ * Create a new user submission and queue for intelligence processing
+ * Body: { submissionData }
+ * This can be called by sync services or manual upload endpoints
+ */
+exports.createSubmission = async (req, res) => {
+  try {
+    const submissionData = req.body;
+
+    // Create the submission
+    const submission = await UserSubmission.create(submissionData);
+
+    // Queue for intelligence processing asynchronously
+    queueSubmissionIntelligence(submission._id).catch(error => {
+      console.error(`Failed to queue submission ${submission._id}: ${error.message}`);
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: submission,
+      message: 'Submission created and queued for intelligence processing',
+    });
+  } catch (error) {
+    console.error('Create submission error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * POST /api/submissions/sync
+ * Bulk create submissions from platform sync (used by sync services)
+ * Body: { submissions: [...] }
+ */
+exports.bulkCreateSubmissions = async (req, res) => {
+  try {
+    const { submissions } = req.body;
+
+    if (!Array.isArray(submissions) || !submissions.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'submissions array is required',
+      });
+    }
+
+    // Create all submissions
+    const created = await UserSubmission.insertMany(submissions, { ordered: false });
+
+    // Queue all for intelligence processing
+    const queuedIds = [];
+    for (const submission of created) {
+      queueSubmissionIntelligence(submission._id)
+        .then(() => {
+          queuedIds.push(submission._id);
+        })
+        .catch(error => {
+          console.error(`Failed to queue submission ${submission._id}: ${error.message}`);
+        });
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        created: created.length,
+        queued: queuedIds.length,
+      },
+      message: `${created.length} submissions created and queued for intelligence processing`,
+    });
+  } catch (error) {
+    console.error('Bulk create submissions error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
 
 /**
  * GET /api/submissions/user/solved

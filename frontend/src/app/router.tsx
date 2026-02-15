@@ -15,13 +15,15 @@ const SignupPage = lazy(() => import('@/modules/auth/pages/SignupPage'));
 
 // Dashboard Pages
 const DashboardPage = lazy(() => import('@/modules/dashboard/pages/DashboardPage'));
-const RoadmapPage = lazy(() => import('@/modules/roadmap/pages/RoadmapPage'));
-const PracticePage = lazy(() => import('@/modules/practice/pages/PracticePage'));
-const MockInterviewPage = lazy(() => import('@/modules/mock-interview/pages/MockInterviewPage'));
+const PracticePageNew = lazy(() => import('@/modules/practice/pages/PracticePageNew'));
+const RevisionPage = lazy(() => import('@/modules/revision/pages/RevisionPage'));
+const MockInterviewPageNew = lazy(() => import('@/modules/mock-interview/pages/MockInterviewPageNew'));
 const AnalyticsPage = lazy(() => import('@/modules/analytics/pages/AnalyticsPage'));
-const PlanningPage = lazy(() => import('@/modules/planning/pages/PlanningPage'));
+const PlannerPage = lazy(() => import('@/modules/planning/pages/PlannerPage'));
 const MentorPage = lazy(() => import('@/modules/mentor/pages/MentorPage'));
 const SettingsPage = lazy(() => import('@/modules/settings/pages/SettingsPage'));
+const ProfilePage = lazy(() => import('@/modules/settings/pages/ProfilePage'));
+const IntegrationsPage = lazy(() => import('@/modules/settings/pages/IntegrationsPage'));
 const NotFoundPage = lazy(() => import('@/modules/dashboard/pages/NotFoundPage'));
 
 // Loading fallback
@@ -70,13 +72,15 @@ export function Router() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/roadmap" element={<RoadmapPage />} />
-          <Route path="/practice" element={<PracticePage />} />
-          <Route path="/mock-interview" element={<MockInterviewPage />} />
+          <Route path="/practice" element={<PracticePageNew />} />
+          <Route path="/revision" element={<RevisionPage />} />
+          <Route path="/mock-interview" element={<MockInterviewPageNew />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/planning" element={<PlanningPage />} />
+          <Route path="/planner" element={<PlannerPage />} />
           <Route path="/mentor" element={<MentorPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/profile" element={<ProfilePage />} />
+          <Route path="/settings/integrations" element={<IntegrationsPage />} />
         </Route>
 
         {/* 404 */}

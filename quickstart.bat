@@ -63,40 +63,19 @@ echo   ✅ Frontend: frontend\
 echo   ✅ AI:       ai-services\
 echo.
 
-REM Create .env if it doesn't exist
-if not exist "backend\.env" (
-  echo Creating backend\.env...
-  (
-    echo # MongoDB
-    echo MONGODB_URI=mongodb://localhost:27017/prepmate
-    echo.
-    echo # JWT
-    echo JWT_SECRET=your-secret-key-here-change-in-production
-    echo JWT_EXPIRY=7d
-    echo.
-    echo # AI Services
-    echo AI_SERVICES_URL=http://localhost:8000
-    echo.
-    echo # Redis
-    echo REDIS_HOST=localhost
-    echo REDIS_PORT=6379
-    echo.
-    echo # Platform APIs
-    echo CODEFORCES_API=https://codeforces.com/api
-    echo LEETCODE_API=https://leetcode.com/api
-    echo HACKERRANK_API=https://www.hackerrank.com/rest
-    echo GEEKSFORGEEKS_API=https://api.geeksforgeeks.org
-    echo.
-    echo # Sync Configuration
-    echo DEFAULT_SYNC_INTERVAL=0 * * * *
-    echo QUEUE_MAX_RETRIES=3
-    echo QUEUE_INITIAL_DELAY=2000
-    echo NODE_ENV=development
-    echo PORT=5000
-  ) > "backend\.env"
-  echo ✅ Created backend\.env
+REM Check for central .env file
+if not exist ".env" (
+  echo ⚠️  Central .env file not found!
+  echo Creating .env from .env.example...
+  if exist ".env.example" (
+    copy ".env.example" ".env"
+    echo ✅ Created .env from .env.example
+    echo ⚠️  Please update .env with your configuration values
+  ) else (
+    echo ❌ .env.example not found! Cannot create .env
+  )
 ) else (
-  echo ✅ backend\.env already exists
+  echo ✅ Central .env file exists
 )
 
 echo.
