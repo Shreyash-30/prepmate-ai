@@ -47,9 +47,8 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting AI Services...")
 
     try:
-        # Initialize Gemini
+        # Initialize Gemini (non-fatal - allows startup even without API key)
         await initialize_gemini()
-        logger.info("✅ Gemini initialized")
 
         # Initialize MongoDB connection
         mongo_uri = os.getenv(
@@ -91,7 +90,7 @@ async def lifespan(app: FastAPI):
         logger.info("✨ All AI Services ready!")
 
     except Exception as e:
-        logger.error(f"❌ Startup error: {str(e)}")
+        logger.error(f"❌ Critical startup error: {str(e)}")
         raise
 
     yield

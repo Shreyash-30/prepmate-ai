@@ -15,14 +15,33 @@ logger = logging.getLogger(__name__)
 class GeminiClient:
     """Client for interacting with Google Gemini API"""
 
-    def __init__(self):
-        """Initialize Gemini client with API key from environment"""
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
-
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
+    def __init__(self, api_key: Optional[str] = None):
+        """Initialize Gemini client with API key from environment or parameter
+        
+        Args:
+            api_key: Optional API key. If not provided, attempts to load from environment.
+                    If no key is available, initializes in degraded mode.
+        """
+        if api_key is None:
+            api_key = os.getenv("GEMINI_API_KEY")
+        
+        self.api_key = api_key
+        self.model = None
+        self.available = False
+        
+        if api_key:
+            try:
+                genai.configure(api_key=api_key)
+                self.model = genai.GenerativeModel("gemini-2.5-flash")
+                self.available = True
+                logger.info("✅ Gemini client initialized successfully")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to configure Gemini: {str(e)}")
+                self.available = False
+        else:
+            logger.warning("⚠️ GEMINI_API_KEY not configured. LLM features will be unavailable.")
+            self.available = False
+        
         self.safety_settings = [
             {
                 "category": "HARM_CATEGORY_HARASSMENT",
@@ -41,7 +60,6 @@ class GeminiClient:
                 "threshold": "BLOCK_LOW_AND_ABOVE",
             },
         ]
-        logger.info("Gemini client initialized successfully")
 
     async def generate_response(
         self,
@@ -62,8 +80,15 @@ class GeminiClient:
             timeout: Timeout in seconds
 
         Returns:
-            Generated response text
+            Generated response text, or fallback message if API unavailable
         """
+        # Check if Gemini is available
+        if not self.available or not self.model:
+            logger.warning("⚠️ Gemini API not available. Returning degraded response.")
+            return self._get_fallback_response(
+                "LLM service is currently unavailable. This feature requires Gemini API configuration."
+            )
+        
         for attempt in range(retry_count):
             try:
                 logger.debug(f"Gemini generation attempt {attempt + 1}/{retry_count}")
@@ -219,18 +244,40 @@ def get_gemini_client() -> GeminiClient:
 
 
 async def initialize_gemini() -> None:
-    """Initialize Gemini client on application startup"""
+    """Initialize Gemini client on application startup
+    
+    Non-fatal initialization - logs warning if unavailable but doesn't crash startup
+    """
     try:
         client = get_gemini_client()
-        # Test connection
+        
+        # Skip test if not available
+        if not client.available:
+            logger.warning("⚠️ Gemini API not configured - LLM features will be unavailable")
+            return
+        
+        # Test connection if available
         test_response = await client.generate_response(
             "Say 'Gemini API is working' in exactly these words.",
             temperature=0.0,
         )
-        if test_response:
+        if test_response and "working" in test_response.lower():
             logger.info("✅ Gemini API connection verified")
         else:
-            logger.error("❌ Gemini API test failed")
+            logger.warning("⚠️ Gemini API test returned unexpected response")
     except Exception as e:
-        logger.error(f"Failed to initialize Gemini: {str(e)}")
-        raise
+        logger.warning(f"⚠️ Failed to initialize Gemini: {str(e)}. LLM features will be unavailable.")
+        # Don't re-raise - allow app to start with degraded functionality
+
+
+def is_gemini_available() -> bool:
+    """Check if Gemini API is available and ready to use
+    
+    Returns:
+        True if Gemini is configured and available, False otherwise
+    """
+    try:
+        client = get_gemini_client()
+        return client.available
+    except Exception:
+        return False

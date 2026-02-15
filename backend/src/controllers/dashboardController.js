@@ -8,6 +8,8 @@ const UserSubmission = require('../models/UserSubmission');
 const UserTopicStats = require('../models/UserTopicStats');
 const ReadinessScore = require('../models/ReadinessScore');
 const WeakTopicSignal = require('../models/WeakTopicSignal');
+const MasteryMetric = require('../models/MasteryMetric');
+const UserDashboardSnapshot = require('../models/UserDashboardSnapshot');
 const PlatformIntegration = require('../models/PlatformIntegration');
 const Problem = require('../models/Problem');
 const RevisionSchedule = require('../models/RevisionSchedule');
@@ -17,14 +19,47 @@ const mongoose = require('mongoose');
 /**
  * GET /api/dashboard/summary
  * High-level overview: problems solved, platforms synced, completion metrics
- * Powered by real UserSubmission aggregation
+ * Powered by UserDashboardSnapshot (denormalized read model) for <100ms response time
+ * Falls back to aggregation if snapshot unavailable
  */
 exports.getSummary = async (req, res) => {
   try {
     const userId = new mongoose.Types.ObjectId(req.user.id);
+    
+    // Try to read from snapshot first (optimized for speed)
+    let snapshot = await UserDashboardSnapshot.findOne({ userId }).lean();
+    
+    if (snapshot) {
+      // Fast path: Read from pre-computed snapshot
+      const platforms = await PlatformIntegration.find({ userId });
+      
+      return res.json({
+        success: true,
+        source: 'snapshot', // Indicates fast read
+        data: {
+          totalProblemsSolved: snapshot.totalSolved,
+          solveRate: Math.round(snapshot.solveRate * 100),
+          masteryDistribution: snapshot.masteryDistribution,
+          weakTopics: snapshot.weakTopics?.slice(0, 5),
+          strongTopics: snapshot.strongTopics?.slice(0, 5),
+          readinessScore: Math.round(snapshot.readinessScore * 100),
+          readinessLevel: snapshot.readinessLevel,
+          consistencyScore: Math.round(snapshot.consistencyScore * 100),
+          activeTasks: snapshot.activeTasks,
+          syncedPlatforms: platforms.map(p => ({
+            name: p.platformName,
+            connected: true,
+            username: p.username,
+            lastSync: p.lastSyncTime,
+          })),
+          lastUpdated: snapshot.lastUpdatedAt,
+        },
+      });
+    }
+    
+    // Fallback: Compute if snapshot unavailable
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // Aggregation: Submissions grouped by difficulty and platform
     const submissionStats = await UserSubmission.aggregate([
       { $match: { userId, isSolved: true } },
       {
@@ -71,19 +106,16 @@ exports.getSummary = async (req, res) => {
       },
     ]);
 
-    // Get platform integrations
     const platforms = await PlatformIntegration.find({ userId });
+    const readinessScore = await ReadinessScore.findOne({ userId });
 
-    // Build response
     const totalData = submissionStats[0]?.totalStats[0] || { totalSolved: 0, last7Days: 0 };
     const difficultyDist = submissionStats[0]?.difficultyBreakdown || [];
     const platformDist = submissionStats[0]?.platformBreakdown || [];
 
-    // Get readiness score
-    const readinessScore = await ReadinessScore.findOne({ userId });
-
     res.json({
       success: true,
+      source: 'aggregation', // Indicates fallback computation
       data: {
         totalProblemsSolved: totalData.totalSolved,
         problemsSolvedLast7Days: totalData.last7Days,
@@ -483,21 +515,136 @@ exports.getMasteryGrowth = async (req, res) => {
       .sort({ estimated_mastery: -1 })
       .lean();
 
+    // Fetch mastery metrics for confidence score and trend
+    const masteryMetrics = await MasteryMetric.find({ userId })
+      .lean();
+
+    // Fetch weak topic signals for intervention flags
+    const weakTopics = await WeakTopicSignal.find({ userId })
+      .lean();
+
+    // Create map for quick lookups
+    const masteryMap = {};
+    const weaknessMap = {};
+    
+    masteryMetrics.forEach(m => {
+      masteryMap[m.topicId?.toString()] = m;
+    });
+    
+    weakTopics.forEach(w => {
+      weaknessMap[w.topicId?.toString()] = w;
+    });
+
+    // Build enhanced mastery data
     const masteryData = topicStats
       .slice(0, 8) // Top 8 topics
-      .map(stat => ({
-        topic: stat.topic_name,
-        mastery: Math.round((stat.estimated_mastery || 0) * 100),
-        problemsSolved: stat.problems_solved || 0,
-        lastUpdated: stat.last_attempt_at,
-      }));
+      .map(stat => {
+        const topicIdStr = stat.topic_id?.toString() || stat._id?.toString();
+        const masteryMetric = masteryMap[topicIdStr];
+        const weakSignal = weaknessMap[topicIdStr];
+        
+        // Determine improvement trend
+        const recentScore = stat.recent_success_rate || 0;
+        const overallScore = stat.estimated_mastery || 0;
+        let improvementTrend = 'stable';
+        if (recentScore > overallScore + 0.1) improvementTrend = 'improving';
+        if (recentScore < overallScore - 0.1) improvementTrend = 'declining';
+        
+        // Determine recommended difficulty based on mastery level
+        let recommendedDifficulty = 'easy';
+        if (overallScore >= 0.7) {
+          recommendedDifficulty = 'hard';
+        } else if (overallScore >= 0.4) {
+          recommendedDifficulty = 'medium';
+        }
+
+        return {
+          topic: stat.topic_name,
+          topicId: topicIdStr,
+          mastery: Math.round(overallScore * 100),
+          
+          // Enhanced intelligence fields
+          confidence: Math.round((masteryMetric?.confidence_score || 0) * 100),
+          improvementTrend: improvementTrend,
+          recommendedDifficulty: recommendedDifficulty,
+          
+          // Practice metrics
+          problemsSolved: stat.problems_solved || 0,
+          successRate: stat.problems_solved > 0 
+            ? Math.round((stat.problems_solved / (stat.problems_attempted || stat.problems_solved)) * 100)
+            : 0,
+          
+          // Weakness indicators
+          isWeakTopic: weakSignal ? true : false,
+          riskScore: weakSignal?.riskScore || 0,
+          interventionRequired: weakSignal?.interventionRequired || false,
+          
+          // Temporal data
+          lastUpdated: stat.last_attempt_at,
+          daysSinceLastAttempt: stat.last_attempt_at 
+            ? Math.floor((Date.now() - new Date(stat.last_attempt_at)) / (1000 * 60 * 60 * 24))
+            : -1,
+        };
+      });
 
     res.json({
       success: true,
-      data: masteryData,
+      data: {
+        masteryScores: masteryData,
+        summary: {
+          totalTopicsTracked: topicStats.length,
+          averageMastery: Math.round(
+            topicStats.reduce((sum, s) => sum + (s.estimated_mastery || 0), 0) / (topicStats.length || 1) * 100
+          ),
+          weakTopicsCount: weakTopics.length,
+          improvedTopicsCount: topicStats.filter(s => (s.recent_success_rate || 0) > ((s.estimated_mastery || 0) + 0.1)).length,
+        }
+      },
     });
   } catch (error) {
     console.error('Dashboard mastery growth error:', error);
     res.status(500).json({ error: 'Failed to fetch mastery growth' });
+  }
+};
+/**
+ * GET /api/dashboard/readiness
+ * Current readiness score and level
+ * Expected by frontend userDataService.fetchReadinessScore()
+ */
+exports.getReadinessScore = async (req, res) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+
+    const readinessData = await ReadinessScore.findOne({ userId }).lean();
+
+    if (!readinessData) {
+      return res.json({
+        success: true,
+        data: {
+          readinessScore: 0,
+          readinessLevel: 'not-ready',
+          estimatedReadyDate: null,
+          confidence: 0,
+          message: 'Insufficient data for readiness prediction. Complete more problems to generate readiness assessment.',
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        readinessScore: Math.round(readinessData.overallReadinessScore || 0),
+        readinessLevel: readinessData.readinessLevel || 'not-ready',
+        estimatedReadyDate: readinessData.estimatedReadyDate,
+        confidence: Math.round((readinessData.confidence || 0) * 100),
+        contributingFactors: readinessData.contributingFactors || [],
+        weakAreas: readinessData.weakAreas || [],
+        strongAreas: readinessData.strongAreas || [],
+        lastUpdated: readinessData.lastUpdated,
+      },
+    });
+  } catch (error) {
+    console.error('Dashboard readiness score error:', error);
+    res.status(500).json({ error: 'Failed to fetch readiness score' });
   }
 };

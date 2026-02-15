@@ -14,6 +14,8 @@ const scheduledSyncService = require('./services/scheduledSyncService');
 const { initializeSubmissionQueue } = require('./workers/submissionIntelligenceWorker');
 const { initializeSchedulers, stopAllSchedulers } = require('./workers/automationSchedulers');
 const { initializeWebSocket } = require('./services/websocket');
+const IntelligenceOrchestratorService = require('./services/intelligenceOrchestratorService');
+const { initializeWorkers } = require('./workers/intelligenceOrchestratorWorkers');
 const http = require('http');
 
 const PORT = process.env.PORT || 5000;
@@ -47,6 +49,28 @@ if (process.env.ENABLE_SUBMISSION_QUEUE !== 'false' && process.env.ENABLE_SUBMIS
 if (process.env.ENABLE_AUTOMATION_SCHEDULERS !== 'false') {
   initializeSchedulers();
   console.log('✅ Automation Schedulers initialized');
+}
+
+// Initialize Intelligence Orchestrator Service
+if (process.env.ENABLE_INTELLIGENCE_ORCHESTRATOR !== 'false') {
+  try {
+    IntelligenceOrchestratorService.initialize();
+    console.log('✅ Intelligence Orchestrator Service initialized');
+  } catch (error) {
+    console.warn('⚠️ Intelligence Orchestrator failed to initialize:', error.message);
+    console.warn('Continuing without intelligence pipeline');
+  }
+}
+
+// Initialize Intelligence Pipeline Workers
+if (process.env.ENABLE_INTELLIGENCE_WORKERS !== 'false') {
+  try {
+    initializeWorkers();
+    console.log('✅ Intelligence Pipeline Workers initialized');
+  } catch (error) {
+    console.warn('⚠️ Intelligence Workers failed to initialize:', error.message);
+    console.warn('Continuing without worker pipeline');
+  }
 }
 
 // Initialize WebSocket

@@ -38,6 +38,12 @@ router.get('/today-tasks', dashboardController.getTodayTasks);
 router.get('/readiness-trend', dashboardController.getReadinessTrend);
 
 /**
+ * GET /api/dashboard/readiness
+ * Current readiness score and level (expected by frontend)
+ */
+router.get('/readiness', dashboardController.getReadinessScore);
+
+/**
  * GET /api/dashboard/mastery-growth
  * Mastery progression by topic
  */

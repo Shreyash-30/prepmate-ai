@@ -2,7 +2,7 @@
 LLM Services Package
 Gemini-powered AI services for interview preparation
 """
-from .gemini_client import get_gemini_client, initialize_gemini
+from .gemini_client import get_gemini_client, initialize_gemini, is_gemini_available
 from .mentor_service import MentorService, get_mentor_service, set_mentor_service
 from .practice_review_service import (
     PracticeReviewService,
@@ -24,6 +24,7 @@ from .routers import router
 __all__ = [
     "get_gemini_client",
     "initialize_gemini",
+    "is_gemini_available",
     "MentorService",
     "get_mentor_service",
     "set_mentor_service",
